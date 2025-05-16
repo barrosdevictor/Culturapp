@@ -32,7 +32,7 @@ namespace Culturapp.Services
       return eventResponse;
     }
 
-    public async Task AddEventAsync(EventRequest newEventRequest)
+    public async Task CreateEventAsync(EventRequest newEventRequest)
     {
       var mapperEvent = _mapper.Map<Event>(newEventRequest);
       _context.Events.Add(mapperEvent);
@@ -41,9 +41,7 @@ namespace Culturapp.Services
 
     public async Task<Event?> UpdateEventAsync(int id, EventRequest eventRequest)
     {
-
-      var eventUpdateResponse = await GetEventByIdAsync(id)!;
-      var eventUpdate = _mapper.Map<Event>(eventUpdateResponse);
+      var eventUpdate = await _context.Events.FindAsync(id);
 
       if (eventUpdate == null)
       {
@@ -54,17 +52,40 @@ namespace Culturapp.Services
       eventUpdate.StartDate = eventRequest.StartDate;
       eventUpdate.EndDate = eventRequest.EndDate;
       eventUpdate.Description = eventRequest.Description;
-      eventUpdate.LocationAddressId = eventRequest.LocationAddressId;
+      var locationAddress = await _context.Addresses.FindAsync(eventRequest.LocationAddressId);
+      eventUpdate.LocationAddress = locationAddress;
       eventUpdate.Capacity = eventRequest.Capacity;
       eventUpdate.TicketPrice = eventRequest.TicketPrice;
       eventUpdate.SalesStartDate = eventRequest.SalesStartDate;
       eventUpdate.SalesEndDate = eventRequest.SalesEndDate;
       eventUpdate.ScoreValue = eventRequest.ScoreValue;
-      eventUpdate.StatusId = eventRequest.StatusInt;
-      eventUpdate.CheckingId = eventRequest.CheckingInt;
-      eventUpdate.FAQId = eventRequest.FAQInt;
-      eventUpdate.EnterpriseId = eventRequest.EnterpriseUserId;
-      eventUpdate.CategoryId = eventRequest.CategoryId;
+      var status = await _context.Statuses.FindAsync(eventRequest.StatusId);
+      eventUpdate.Status = status;
+      var checking = await _context.Checks.FindAsync(eventRequest.CheckingInt);
+      eventUpdate.Checking = checking;
+      var faq = await _context.FAQs.FindAsync(eventRequest.FAQInt);
+      eventUpdate.FAQ = faq;
+      var enterprise = await _context.EnterpriseUsers.FindAsync(eventRequest.EnterpriseUserId);
+      eventUpdate.Enterprise = enterprise;
+      var category = await _context.Categories.FindAsync(eventRequest.CategoryId);
+      eventUpdate.Category = category;
+      var phones = new List<Phone>();
+      if (eventRequest.PhonesId == null)
+      {
+        eventUpdate.Phones = phones!;
+      }
+      else
+      {
+        foreach (var phone in eventRequest.PhonesId!)
+        {
+          var phoneEntity = await _context.Phones.FindAsync(phone);
+          if (phoneEntity != null)
+          {
+            phones.Add(phoneEntity);
+          }
+        }
+        eventUpdate.Phones = phones!;
+      }
 
       _context.Events.Update(eventUpdate);
       await _context.SaveChangesAsync();
