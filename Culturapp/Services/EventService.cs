@@ -1,4 +1,3 @@
-
 using AutoMapper;
 using Culturapp.Data;
 using Culturapp.Models;
@@ -20,73 +19,73 @@ namespace Culturapp.Services
 
     public async Task<ICollection<EventResponse>> GetAllEventsAsync()
     {
-      var events = await _context.Events.ToListAsync();
-      var eventResponse = _mapper.Map<ICollection<EventResponse>>(events);
+      var eventGet = await _context.Events
+          .Include(e => e.LocationAddress)
+          .Include(e => e.Phones)
+          .Include(e => e.ClientUsers)
+          .Include(e => e.Checking)
+          .Include(e => e.FAQ)
+          .Include(e => e.Status)
+          .Include(e => e.Category)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Address)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Phones)
+          .ToListAsync();
+      var eventResponse = _mapper.Map<ICollection<EventResponse>>(eventGet);
       return eventResponse;
     }
 
     public async Task<EventResponse?> GetEventByIdAsync(int id)
     {
-      var events = await _context.Events.FindAsync(id);
-      var eventResponse = _mapper.Map<EventResponse>(events);
+      var eventGet = await _context.Events
+          .Include(e => e.LocationAddress)
+          .Include(e => e.Phones)
+          .Include(e => e.ClientUsers)
+          .Include(e => e.Checking)
+          .Include(e => e.FAQ)
+          .Include(e => e.Status)
+          .Include(e => e.Category)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Address)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Phones)
+          .FirstOrDefaultAsync(e => e.Id == id);
+
+      if (eventGet == null)
+        return null;
+
+      var eventResponse = _mapper.Map<EventResponse>(eventGet);
       return eventResponse;
     }
 
+
     public async Task CreateEventAsync(EventRequest newEventRequest)
     {
-      var mapperEvent = _mapper.Map<Event>(newEventRequest);
-      _context.Events.Add(mapperEvent);
+      var eventNew = new Event();
+      eventNew = await MakeEventRelationshipMapper(eventNew, newEventRequest);
+      eventNew.ScoreValue = eventNew.TicketPrice * 0.10;
+      _context.Events.Add(eventNew);
       await _context.SaveChangesAsync();
     }
 
-    public async Task<Event?> UpdateEventAsync(int id, EventRequest eventRequest)
+    public async Task<Event?> UpdateEventAsync(int id, EventRequest? eventRequest)
     {
       var eventUpdate = await _context.Events.FindAsync(id);
 
-      if (eventUpdate == null)
+      if (eventUpdate == null || eventRequest == null)
       {
         return null;
       }
 
-      eventUpdate.Name = eventRequest.Name;
-      eventUpdate.StartDate = eventRequest.StartDate;
-      eventUpdate.EndDate = eventRequest.EndDate;
-      eventUpdate.Description = eventRequest.Description;
-      var locationAddress = await _context.Addresses.FindAsync(eventRequest.LocationAddressId);
-      eventUpdate.LocationAddress = locationAddress;
-      eventUpdate.Capacity = eventRequest.Capacity;
-      eventUpdate.TicketPrice = eventRequest.TicketPrice;
-      eventUpdate.SalesStartDate = eventRequest.SalesStartDate;
-      eventUpdate.SalesEndDate = eventRequest.SalesEndDate;
-      eventUpdate.ScoreValue = eventRequest.ScoreValue;
-      var status = await _context.Statuses.FindAsync(eventRequest.StatusId);
-      eventUpdate.Status = status;
-      var checking = await _context.Checks.FindAsync(eventRequest.CheckingInt);
-      eventUpdate.Checking = checking;
-      var faq = await _context.FAQs.FindAsync(eventRequest.FAQInt);
-      eventUpdate.FAQ = faq;
-      var enterprise = await _context.EnterpriseUsers.FindAsync(eventRequest.EnterpriseUserId);
-      eventUpdate.Enterprise = enterprise;
-      var category = await _context.Categories.FindAsync(eventRequest.CategoryId);
-      eventUpdate.Category = category;
-      var phones = new List<Phone>();
-      if (eventRequest.PhonesId == null)
-      {
-        eventUpdate.Phones = phones!;
-      }
-      else
-      {
-        foreach (var phone in eventRequest.PhonesId!)
-        {
-          var phoneEntity = await _context.Phones.FindAsync(phone);
-          if (phoneEntity != null)
-          {
-            phones.Add(phoneEntity);
-          }
-        }
-        eventUpdate.Phones = phones!;
-      }
+      bool ticketPriceChanged = eventRequest.TicketPrice != eventUpdate.TicketPrice;
 
+      eventUpdate = await MakeEventRelationshipMapper(eventUpdate, eventRequest);
+
+      if (ticketPriceChanged)
+      {
+        eventUpdate.ScoreValue = eventUpdate.TicketPrice * 0.10;
+      }
       _context.Events.Update(eventUpdate);
       await _context.SaveChangesAsync();
 
@@ -95,13 +94,133 @@ namespace Culturapp.Services
 
     public async Task DeleteEventAsync(int id)
     {
-      var eventResponse = await GetEventByIdAsync(id);
-      if (eventResponse != null)
+      var eventDelete = await _context.Events.FindAsync(id);
+      if (eventDelete != null)
       {
-        var eventToDelete = _mapper.Map<Event>(eventResponse);
+        var eventToDelete = _mapper.Map<Event>(eventDelete);
         _context.Events.Remove(eventToDelete);
         await _context.SaveChangesAsync();
       }
+    }
+
+    public async Task<Event> MakeEventRelationshipMapper(Event? bestEvent, EventRequest? eventRequest)
+    {
+      if (bestEvent == null || eventRequest == null) return null!;
+
+      bestEvent.Name = eventRequest.Name;
+      bestEvent.StartDate = eventRequest.StartDate;
+      bestEvent.EndDate = eventRequest.EndDate;
+      bestEvent.Description = eventRequest.Description;
+      bestEvent.LocationAddress = await _context.Addresses.FindAsync(eventRequest.LocationAddressId);
+      bestEvent.Capacity = eventRequest.Capacity;
+      bestEvent.TicketPrice = eventRequest.TicketPrice;
+      bestEvent.SalesStartDate = eventRequest.SalesStartDate;
+      bestEvent.SalesEndDate = eventRequest.SalesEndDate;
+      bestEvent.Status = await _context.Statuses.FindAsync(eventRequest.StatusId);
+      bestEvent.Checking = await _context.Checks.FindAsync(eventRequest.CheckingInt);
+      bestEvent.FAQ = await _context.FAQs.FindAsync(eventRequest.FAQInt);
+      bestEvent.EnterpriseUser = await _context.EnterpriseUsers.FindAsync(eventRequest.EnterpriseUserId);
+      bestEvent.Category = await _context.Categories.FindAsync(eventRequest.CategoryId);
+      bestEvent.Checking = await _context.Checks.FindAsync(eventRequest.CheckingInt);
+
+      // Phones - substitui todos os anteriores
+      if (eventRequest.PhonesId != null && eventRequest.PhonesId.Any())
+      {
+        var phones = new List<Phone>();
+        foreach (var phoneId in eventRequest.PhonesId)
+        {
+          var phoneEntity = await _context.Phones.FindAsync(phoneId);
+          if (phoneEntity != null)
+          {
+            phones.Add(phoneEntity);
+          }
+        }
+        bestEvent.Phones = phones!;
+      }
+
+      if (eventRequest.ClientUsersId != null && eventRequest.ClientUsersId.Any())
+      {
+        // Carrega o evento atual com os usuários
+        var currentEvent = await _context.Events
+            .Include(e => e.ClientUsers)
+            .FirstOrDefaultAsync(e => e.Id == bestEvent.Id);
+
+        var existingUserIds = currentEvent?.ClientUsers?.Select(u => u!.Id).ToHashSet() ?? new HashSet<int>();
+        var newClientUsers = new List<ClientUser>();
+
+        foreach (var clientUserId in eventRequest.ClientUsersId)
+        {
+          if (clientUserId == null || existingUserIds.Contains(clientUserId.Value))
+            continue;
+
+          var clientUserEntity = await _context.ClientUsers.FindAsync(clientUserId);
+          if (clientUserEntity != null)
+          {
+            newClientUsers.Add(clientUserEntity);
+          }
+        }
+
+        if (bestEvent.ClientUsers == null || !bestEvent.ClientUsers.Any())
+        {
+          bestEvent.ClientUsers = newClientUsers!;
+        }
+        else
+        {
+          foreach (var client in newClientUsers)
+          {
+            bestEvent.ClientUsers.Add(client);
+          }
+        }
+      }
+
+      return bestEvent;
+    }
+
+    public async Task<List<EventResponse>?> GetEventByNameAsync(string name)
+    {
+      var eventGet = await _context.Events
+          .Include(e => e.LocationAddress)
+          .Include(e => e.Phones)
+          .Include(e => e.ClientUsers)
+          .Include(e => e.Checking)
+          .Include(e => e.FAQ)
+          .Include(e => e.Status)
+          .Include(e => e.Category)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Address)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Phones)
+          .Where(e => EF.Functions.Like(e.Name, $"%{name}%"))
+          .OrderByDescending(e => e.StartDate)
+          .ToListAsync();
+      if (eventGet == null || !eventGet.Any())
+        return null;
+
+      var eventResponse = _mapper.Map<List<EventResponse>>(eventGet);
+      return eventResponse;
+    }
+
+    public async Task<List<EventResponse?>?> GetEventByEnterpriseIdAsync(int id)
+    {
+      var eventGet = await _context.Events
+          .Where(e => e.EnterpriseId == id)
+          .Include(e => e.LocationAddress)
+          .Include(e => e.Phones)
+          .Include(e => e.ClientUsers)
+          .Include(e => e.Checking)
+          .Include(e => e.FAQ)
+          .Include(e => e.Status)
+          .Include(e => e.Category)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Address)
+          .Include(e => e.EnterpriseUser)
+              .ThenInclude(ent => ent!.Phones)
+          .ToListAsync();
+      if (eventGet == null || !eventGet.Any())
+        return null;
+
+      var eventResponse = _mapper.Map<List<EventResponse>>(eventGet);
+      return eventResponse!;
     }
 
   }
