@@ -1,6 +1,9 @@
 using AutoMapper;
 using Culturapp.Data;
 using Culturapp.Models;
+using Culturapp.Models.Requests;
+using Culturapp.Models.Responses;
+using Microsoft.EntityFrameworkCore;
 
 namespace Culturapp.Services
 {
@@ -14,32 +17,31 @@ namespace Culturapp.Services
       _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Checking>> GetAllAsync()
+    public async Task<IEnumerable<CheckingResponse>> GetAllAsync()
     {
-      return await Task.Run(() => _context.Checks);
+      var checks = await _context.Checks.Include(c => c.Event).Include(c => c.ClientUsers).ToListAsync();
+      var mappedChecks = _mapper.Map<IEnumerable<Checking>>(checks);
+      var mappedCheckingResponses = _mapper.Map<IEnumerable<CheckingResponse>>(mappedChecks);
+      return mappedCheckingResponses;
     }
 
-    public async Task<Checking> GetByIdAsync(int id)
+    public async Task<Checking?> GetByIdAsync(int id)
     {
-      return await Task.Run(() => _context.Checks.Find(id));
+      var checking = await _context.Checks.Include(c => c.Event).Include(c => c.ClientUsers).FirstOrDefaultAsync(c => c.Id == id);
+      var mappedChecking = _mapper.Map<Checking>(checking);
+      return mappedChecking!;
     }
 
-    public async Task<Checking> CreateAsync(Checking checking)
+    public async Task<CheckingResponse?> UpdateAsync(int id, CheckingRequest checking)
     {
-      _context.Checks.Add(checking);
-      await _context.SaveChangesAsync();
-      return checking;
-    }
-
-    public async Task<Checking?> UpdateAsync(Checking checking)
-    {
-      var existing = _context.Checks.Find(checking.Id);
+      var existing = await _context.Checks.FirstOrDefaultAsync(c => c.Id == id);
       if (existing == null)
         return null;
 
-      _context.Entry(existing).CurrentValues.SetValues(checking);
+      _mapper.Map(checking, existing);
       await _context.SaveChangesAsync();
-      return existing;
+      var mappedCheckingResponse = _mapper.Map<CheckingResponse>(existing);
+      return mappedCheckingResponse!;
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -52,5 +54,6 @@ namespace Culturapp.Services
       await _context.SaveChangesAsync();
       return true;
     }
+
   }
 }

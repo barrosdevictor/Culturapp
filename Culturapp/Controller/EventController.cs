@@ -43,8 +43,14 @@ namespace Culturapp.Controllers
     public async Task<ActionResult<Event>> PostEvent(EventRequest eventItem)
     {
 
-      await _eventService.CreateEventAsync(eventItem);
       if (eventItem == null)
+      {
+        return BadRequest();
+      }
+
+      var eventCreate = await _eventService.CreateEventAsync(eventItem);
+
+      if (eventCreate == null)
       {
         return BadRequest();
       }

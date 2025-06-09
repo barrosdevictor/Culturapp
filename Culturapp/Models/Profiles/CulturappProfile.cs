@@ -32,7 +32,11 @@ namespace Culturapp.Models.Profiles
       CreateMap<Category, CategoryRequest>().ReverseMap();
 
       // CheckIn
-      CreateMap<Checking, CheckingResponse>().ReverseMap();
+      CreateMap<Checking, CheckingRequest>().ReverseMap();
+      CreateMap<Checking, CheckingResponse>()
+        .ForMember(dest => dest.ClientUsers, opt => opt.MapFrom(src => src.ClientUsers))
+        .ForMember(dest => dest.Event, opt => opt.MapFrom(src => src.Event))
+        .ReverseMap();
 
       // Faq
       CreateMap<FAQ, FaqResponse>().ReverseMap();
@@ -49,14 +53,14 @@ namespace Culturapp.Models.Profiles
       // Event
       CreateMap<Event, EventRequest>().ReverseMap();
       CreateMap<Event, EventResponse>()
-        .ForMember(dest => dest.EnterpriseUserResponse, opt => opt.MapFrom(src => src.EnterpriseUser))
-        .ForMember(dest => dest.AddressResponse, opt => opt.MapFrom(src => src.LocationAddress))
-        .ForMember(dest => dest.StatusResponse, opt => opt.MapFrom(src => src.Status))
-        .ForMember(dest => dest.CategoryResponse, opt => opt.MapFrom(src => src.Category))
-        .ForMember(dest => dest.FaqResponse, opt => opt.MapFrom(src => src.FAQ))
+        .ForMember(dest => dest.EnterpriseUser, opt => opt.MapFrom(src => src.EnterpriseUser))
+        .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.LocationAddress))
+        .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
+        .ForMember(dest => dest.Faq, opt => opt.MapFrom(src => src.FAQ))
         .ForMember(dest => dest.Checking, opt => opt.MapFrom(src => src.Checking))
-        .ForMember(dest => dest.PhoneResponses, opt => opt.MapFrom(src => src.Phones))
-        .ForMember(dest => dest.ClientUserResponses, opt => opt.MapFrom(src => src.ClientUsers));
+        .ForMember(dest => dest.Phones, opt => opt.MapFrom(src => src.Phones))
+        .ForMember(dest => dest.ClientUsers, opt => opt.MapFrom(src => src.ClientUsers));
 
     }
   }

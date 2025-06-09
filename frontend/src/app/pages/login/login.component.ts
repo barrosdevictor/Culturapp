@@ -28,10 +28,10 @@ export class LoginComponent {
 
   login() {
     var credenciais = this.loginForm.value;
-    console.log(credenciais);
-    debugger;
+
     this.authService.login(credenciais).subscribe(() => {
-      this.router.navigate(['/eventpage']);
+      //this.router.navigate(['/eventpage']);
+      this.router.navigate(['/faq']);
     });
   }
 }

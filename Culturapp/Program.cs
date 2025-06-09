@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Culturapp.Data;
 using Culturapp.Models;
@@ -47,25 +48,25 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ClientUserService>();
 builder.Services.AddScoped<EnterpriseUserService>();
+builder.Services.AddScoped<AddressService>();
+builder.Services.AddScoped<PhoneService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<StatusService>();
-
-builder.Services.AddScoped<AddressService>();
-builder.Services.AddScoped<PhoneService>();
+builder.Services.AddScoped<CheckingService>();
 
 builder.Services.AddAutoMapper(typeof(CulturappProfile).Assembly);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
 
@@ -76,8 +77,6 @@ builder.Services.AddCors(options =>
                           .AllowAnyMethod()
                           .AllowAnyHeader());
 });
-
-
 
 // Configuração do Swagger
 builder.Services.AddEndpointsApiExplorer();

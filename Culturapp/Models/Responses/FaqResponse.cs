@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Culturapp.Models.Responses
 {
   public class FaqResponse
@@ -8,7 +6,6 @@ namespace Culturapp.Models.Responses
     public string? Question { get; set; }
     public string? Answer { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public EventResponse? EventResponse { get; set; }
+    public EventResponse? Event { get; set; }
   }
 }
